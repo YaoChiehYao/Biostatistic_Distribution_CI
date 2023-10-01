@@ -1,0 +1,254 @@
+---
+title: "Distribution & CI"
+author: "Yaochieh Yao"
+date: "2/5/2023"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(mvtnorm, quietly = TRUE) #load library “mvtnorm”
+data(golub, package = "multtest",quietly = TRUE)
+```
+
+## Module 4 Conte Carlo Simulation
+**Problem 1 <br>**
+Suppose that for certain microRNA of size 20 the probability of a purine is
+binomially distributed with probability 0.7. Say there are 100 such microRNAs,
+each independent of the other.<br>
+<br>
+Let Y denote the average number of purine in these microRNAs. Find the
+probability that Y is great than 15. Please give a theoretical calculation, do NOT
+use Monte Carlo simulation to approximate. Show all the steps and formulas in
+your calculation.<br>
+<br>
+```{r}
+# Since each sample is independent, CLT allows us to see them as a norm.
+# P(Y>15) =1-P(Y<=15)
+1-pnorm(15, mean=20*0.7,sd=sqrt(20*0.7*0.3)/sqrt(100)) #[1] 5.317746e-07
+```
+<br>
+<br>
+**Problem 2 <br>**
+Two genes’ expression values follow a bivariate normal distribution. Let X and Y
+denote their expression values respectively. Also, assume that X has mean=7 and
+variance=3.Y has mean=12 and variance=7. The covariance between X and Y is 3.<br>
+<br>
+In a trial, 100 independent measurements of the expression values of the two genes
+are collected, and denoted as , …,(X100, Y100). We wish to find the
+probability , i.e., the probability that the sample mean for the
+second gene exceeds the sample mean of the first gene more than 0.5.<br>
+<br>
+Conduct a Monte Carlo simulation to approximate this probability, providing a
+95% confidence interval for your estimation. Submit your R script for the Monte
+Carlo simulation.<br>
+```{r}
+# problem 2
+nsim=1000
+XmeanLess.sim<- rep(NA,nsim)
+for (i in 1:nsim){
+  data.sim<-rmvnorm(100,mean=c(7,12), sigma=matrix(c(3,3,3,7), nrow = 2))
+  mean.sim<-apply(data.sim,2,mean)
+  Xmean<-mean.sim[1]
+  Ymean<-mean.sim[2]
+  XmeanLess.sim[i]<-(Xmean+0.5<Ymean) 
+}
+mean(XmeanLess.sim) # [1] 1
+mean(XmeanLess.sim)+c(-1,1)*1.96*sqrt(var(XmeanLess.sim)/nsim) #[1] 1 1
+```
+<br>
+<br>
+**Problem 3 <br>**
+Assume there are three independent random variables X1~chisq(df~8),
+X2~ Gamma(α=1, β=2), X3~ t-distribution with degrees of freedom m=5.<br>
+Define a new random variable Y√X1X2+4(X3^2) as (note that the square
+root is only for X1.)<br>
+<br>
+Use Monte Carlo simulation to find the mean of Y. Submit your R script for the
+Monte Carlo simulation.
+```{r}
+x1<-rchisq(10000,df=8)
+x2<-rgamma(10000,shape=1,scale=2)
+x3<-rt(10000,df=5)
+y<-sqrt(x1)*x2+4*(x3^2)
+mean(y) #[1] 12.8268
+```
+<br>
+<br>
+
+**Problem 4 <br>**
+Complete exercise 10 in Chapter 3 of Applied Statistics for Bioinformatics using R. Submit the plot, and a brief explanation of your observation.
+The problem refers to the density function of extreme value distribution in another book. You do not have to look for the other book, the density function is <br>
+<br>
+        f(x)=exp(-x)exp(-exp(-x))<br>
+<br>
+Here exp(-x) is the same as e-x.<br>
+<br>
+ANS:<br>
+The observed extreme value distribution approaches the f function pdf and
+normal distribution for both the central location and wave scale.
+```{r}
+my.stat<-NULL
+n<-10000
+for (i in 1:1000) {  
+  mx<-max(rnorm(n)) 
+  an<-sqrt(2*log(n))-0.5*(log(log(n))+log(4*pi))*(2*log(n))^(-1/2)
+  bn<-(2*log(n))^(-1/2)
+  my.stat<-c(my.stat,(mx-an)/bn) 
+}
+plot(density(my.stat),frame=FALSE,main="Density plot",xlim=c(-4,5),ylim=c(0,0.7))
+f<-function(x){exp(-x)*exp(-exp(-x))}
+curve(f,range(density(my.stat)$x),add=TRUE,col = "blue")
+curve(dnorm,add=TRUE,col = "red")
+legend(x = "topleft", lty = c(2,3),bty = "n",
+       col= c("black","blue","red"), 
+       legend=c("Extreme value", "Function curve", "Normal distribution"))
+```
+<br>
+<br>
+<br>
+<br>
+
+## Module 5 Distribution & CI
+**Problem 1 <br>**
+A random sample of size 6 from the exp(λ) distribution results in observations:
+1.433, 0.524, 0.384, 4.515, 1.852, 0.429. Find the MLE on this data set in two
+ways:<br>
+a.By numerical optimization of the likelihood (please include R code) and <br>
+```{r warning=FALSE}
+obs<-c(1.433,0.524,0.384,4.515,1.852,0.429)
+# problem 1-a
+lik<-function(lam) prod(dexp(obs, rate = lam))
+nlik<-function(lam)-lik(lam)
+optim(par=1, nlik)$par #[1] 0.6566895
+```
+<br>
+<br>
+b.by the analytic formula.<br>
+```{r}
+# problem 1-b
+length(obs)/sum(obs)
+```
+<br>
+<br>
+
+**Problem 2 <br>**
+A random sample X1, X2, ………., X75 follows chi-square distribution with m degree of
+freedom, has sample mean 𝑋 " = 98.6 and sample standard deviation 𝑠 = 9.4.<br>
+a.Find the point estimator of m using the method of moments.<br>
+ANS:98.6<br>
+<br>
+<br>
+b.Find a one-sided 90% lower confidence interval of m.<br>
+Please provide the formulas and the derivations together with your numerical
+answer.
+```{r}
+# problem 2-b 
+n=75
+98.6+qt(0.1,df=n-1)*9.4/sqrt(n) # (97.19645, Inf)
+```
+<br>
+<br>
+
+**Problem 3 <br>**
+On the Golub et al. (1999) data set, analyze the Zyxin gene expression data
+separately for the ALL and AML groups.<br>
+a.Find the bootstrap 95% CIs for the mean and for the variance of the gene
+expression in each group separately.
+```{r}
+gol.fac <- factor(golub.cl, levels=0:1, labels = c("ALL", "AML"))
+AL_Zin<-golub[2124,gol.fac=="ALL"]
+AM_Zin<-golub[2124,gol.fac=="AML"]
+nboot<- 1000
+AL_n<-length(AL_Zin)
+AM_n<-length(AM_Zin)
+# problem 3-a
+AL.mean <- AL.var <- AM.mean <- AM.var <-rep(NA, nboot)
+for (i in 1:nboot) { 
+  AL.mean[i]<-mean(AL_Zin[sample(1:AL_n,replace=TRUE)]) 
+  AM.mean[i]<-mean(AM_Zin[sample(1:AM_n,replace=TRUE)])
+  AL.var[i]<-var(AL_Zin[sample(1:AL_n,replace=TRUE)])
+  AM.var[i]<-var(AM_Zin[sample(1:AM_n,replace=TRUE)])
+} 
+quantile(AL.mean,c(0.025,0.975)) # -0.57641829 -0.04043985
+quantile(AM.mean,c(0.025,0.975)) # 1.380224 1.803251
+quantile(AL.var,c(0.025,0.975))  # 0.3551999 0.6506627
+quantile(AM.var,c(0.025,0.975))  # 0.04554198 0.20368202 
+```
+<br>
+<br>
+b.Find the parametric 95% CIs for the mean and for the variance of the gene
+expression in each group separately. (You need to choose the appropriate
+approximate formula to use: z-interval, t-interval or chi-square interval.)
+```{r}
+# problem 3-b c(-1.96,1.96)
+ci.all.mean<- mean(AL_Zin)+qt(c(0.025,0.975),df=AL_n-1)*sd(AL_Zin)/sqrt(AL_n) 
+ci.aml.mean<-mean(AM_Zin)+qt(c(0.025,0.975),df=AM_n-1)*sd(AM_Zin)/sqrt(AM_n)
+ci.all.var<-(AL_n-1)*sd(AL_Zin)^2/qchisq(c(0.975,0.025),df=AL_n-1)
+ci.aml.var<-(AM_n-1)*sd(AM_Zin)^2/qchisq(c(0.975,0.025),df=AM_n-1)
+print(ci.all.mean) #[1] -0.580738750 -0.008846435
+print(ci.aml.mean) #[1] 1.339698 1.833638
+print(ci.all.var) #[1] 0.3240441 0.9812951
+print(ci.aml.var) #[1] 0.06597815  0.41621602
+```
+<br>
+<br>
+c.Find the bootstrap 95% CI for the median gene expression in both groups
+separately.
+```{r}
+# problem 3-c
+AL.median <- AM.median<- rep(NA, nboot)
+for (i in 1:nboot){
+  AL.median[i]<-median(AL_Zin[sample(1:AL_n,replace=TRUE)])
+  AM.median[i]<-median(AM_Zin[sample(1:AM_n,replace=TRUE)])
+}
+quantile(AL.median,c(0.025,0.975)) # -0.73507  0.31432
+quantile(AM.median,c(0.025,0.975)) # 1.22814 1.82829 
+```
+<br>
+<br>
+**Problem 4 <br>**
+For a random sample of 50 observations from Poisson distribution, we have two
+ways to construct a 90% CI for the parameter λ.<br>
+1.Since the Poisson mean is λ, we can use the interval for the sample mean
+(X ̄+t_0.05,49 √(X ̄/50),X ̄+t_0.95,49 √(X ̄/50))<br>
+<br>
+2.Since the Poisson variance is also λ, we can use the interval for the sample
+variance directly: ((49s^2)/(χ_0.95,49^2 ),(49s^2)/(χ_0.05,49^2 )) <br>
+<br>
+a.Write a R-script to conduct a Monte Carlo study for the coverage probabilities
+of the two CIs. That is, to generate nsim=1000 such data sets from the Poisson
+distribution. Check the proportion of the CIs that contains the true parameter λ.<br>
+```{r}
+# problem 4 -a
+MCsim<-function(nsim, lambda) {
+  cov1<-cov2<-rep(NA,nsim)
+  for (i in 1:nsim) {
+    n=50
+    x<- rpois(n,lambda)
+    xbar<-mean(x)
+    Xsd<-sd(x)
+    CI1<-xbar+qt(c(.05,.95),df=n-1)*sqrt(xbar/n)
+    CI2<-49*Xsd^2/qchisq(c(.95,.05), df=n-1)
+    cov1[i]<-(CI1[1]<lambda)&(lambda<CI1[2])
+    cov2[i]<-(CI2[1]<lambda)&(lambda<CI2[2])
+  }
+  print(paste("When lambda=", lambda, ": coverage for first CI is", mean(cov1), ", coverage for second CI is", mean(cov2), "."))
+}
+```
+<br>
+<br>
+b.Run the Monte Carlo simulation for nsim=1000 runs, at three different
+parameter values: λ=0.1, λ=1 and λ=10. Report the coverage probabilities of these
+two CIs at each of the three parameter values.
+```{r}
+# problem 4 -b
+MCsim(nsim=1000, lambda=0.1)  # (0.882,0.566)
+MCsim(nsim=1000, lambda=1.0)  # (0.896,0.818)
+MCsim(nsim=1000, lambda=10.0) # (0.902,0.899)
+```
+
